@@ -1,6 +1,6 @@
 @echo off
 rem SPDX-License-Identifier: MIT
-rem Copyright (C) 2019-2021 WireGuard LLC. All Rights Reserved.
+rem Copyright (C) 2019-2022 WireGuard LLC. All Rights Reserved.
 
 setlocal
 set BUILDDIR=%~dp0
@@ -22,6 +22,13 @@ if exist ..\.deps\prepared goto :build
 	call :build_plat x86 i686 386 || goto :error
 	call :build_plat amd64 x86_64 amd64 || goto :error
 	call :build_plat arm64 aarch64 arm64 || goto :error
+
+:sign
+	if exist ..\sign.bat call ..\sign.bat
+	if "%SigningCertificate%"=="" goto :success
+	if "%TimestampServer%"=="" goto :success
+	echo [+] Signing
+	signtool sign /sha1 "%SigningCertificate%" /fd sha256 /tr "%TimestampServer%" /td sha256 /d "WireGuard Tunnel" x86\tunnel.dll amd64\tunnel.dll arm64\tunnel.dll || goto :error
 
 :success
 	echo [+] Success
