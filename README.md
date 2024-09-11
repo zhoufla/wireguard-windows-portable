@@ -1,3 +1,7 @@
+# 缝合DrEm-s的[WireGuard-windows-portable](https://github.com/DrEm-s/wireguard-windows-portable)和HalcyonAzure的[wireguard-ip4p](https://github.com/HalcyonAzure/wireguard-ip4p)，为WireGuard-windows增加IP4P解析功能，并且便携化，具体功能介绍请参考以上两位的主页。
+
+便携式的wireguard for windows客户端，去掉了加密配置文件，实现了IP4P解析功能，用来配合natmap及Natter之类的软件用来回家使用。
+
 # Added simple portable mode.
 Just save wireguard.exe and wg.exe in any folder and run wireguard.exe from it.
 - [https://github.com/DrEm-s/wireguard-windows-portable/releases/download/v1.0.2/wireguard.exe](https://github.com/DrEm-s/wireguard-windows-portable/releases/download/v1.0.2/wireguard.exe)

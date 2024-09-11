@@ -6,18 +6,18 @@
 package conf
 
 import (
-	"log"
-	"net/netip"
-	"time"
-	"unsafe"
-
-	"golang.zx2c4.com/wireguard/windows/tunnel/winipcfg"
-
-	"golang.org/x/sys/windows"
+	"fmt"
+	"github.com/miekg/dns"
+	//"golang.org/x/sys/windows"
 	"golang.zx2c4.com/wireguard/windows/services"
+	"net"
+	"time"
 )
 
-func resolveHostname(name string) (resolvedIPString string, err error) {
+const dnsPort = "53"
+const dnsServer = "223.5.5.5"
+
+func resolveHostname(name string, port uint16) (resolvedEndpoint *Endpoint, err error) {
 	maxTries := 10
 	if services.StartedAtBoot() {
 		maxTries *= 3
@@ -26,60 +26,52 @@ func resolveHostname(name string) (resolvedIPString string, err error) {
 		if i > 0 {
 			time.Sleep(time.Second * 4)
 		}
-		resolvedIPString, err = resolveHostnameOnce(name)
+		resolvedEndpoint, err = resolveHostnameOnce(name, port)
 		if err == nil {
 			return
-		}
-		if err == windows.WSATRY_AGAIN {
-			log.Printf("Temporary DNS error when resolving %s, so sleeping for 4 seconds", name)
-			continue
-		}
-		if err == windows.WSAHOST_NOT_FOUND && services.StartedAtBoot() {
-			log.Printf("Host not found when resolving %s at boot time, so sleeping for 4 seconds", name)
-			continue
 		}
 		return
 	}
 	return
 }
 
-func resolveHostnameOnce(name string) (resolvedIPString string, err error) {
-	hints := windows.AddrinfoW{
-		Family:   windows.AF_UNSPEC,
-		Socktype: windows.SOCK_DGRAM,
-		Protocol: windows.IPPROTO_IP,
-	}
-	var result *windows.AddrinfoW
-	name16, err := windows.UTF16PtrFromString(name)
+func resolveHostnameOnce(name string, port uint16) (resolvedEndpoint *Endpoint, err error) {
+	c := new(dns.Client)
+	m := new(dns.Msg)
+	m.SetQuestion(dns.Fqdn(name), dns.TypeA)
+	m.RecursionDesired = true
+
+	r, _, err := c.Exchange(m, net.JoinHostPort(dnsServer, dnsPort))
 	if err != nil {
-		return
+		return nil, fmt.Errorf("DNS query failed: %w", err)
 	}
-	err = windows.GetAddrInfoW(name16, nil, &hints, &result)
-	if err != nil {
-		return
-	}
-	if result == nil {
-		err = windows.WSAHOST_NOT_FOUND
-		return
-	}
-	defer windows.FreeAddrInfoW(result)
-	var v6 netip.Addr
-	for ; result != nil; result = result.Next {
-		if result.Family != windows.AF_INET && result.Family != windows.AF_INET6 {
-			continue
-		}
-		addr := (*winipcfg.RawSockaddrInet)(unsafe.Pointer(result.Addr)).Addr()
-		if addr.Is4() {
-			return addr.String(), nil
-		} else if !v6.IsValid() && addr.Is6() {
-			v6 = addr
+	if r != nil {
+		for _, ans := range r.Answer {
+			if a, ok := ans.(*dns.A); ok {
+				return &Endpoint{Host: a.A.String(), Port: port}, nil
+			}
 		}
 	}
-	if v6.IsValid() {
-		return v6.String(), nil
+
+	m.SetQuestion(dns.Fqdn(name), dns.TypeAAAA)
+	r, _, err = c.Exchange(m, net.JoinHostPort(dnsServer, dnsPort))
+	if err != nil {
+		return nil, fmt.Errorf("DNS query failed: %w", err)
 	}
-	err = windows.WSAHOST_NOT_FOUND
-	return
+	if r != nil {
+		for _, ans := range r.Answer {
+			if v6Addr, ok := ans.(*dns.AAAA); ok {
+				// Check whether this is a Teredo address
+				if v6Addr.AAAA[0] == 0x20 && v6Addr.AAAA[1] == 0x01 && v6Addr.AAAA[2] == 0x00 && v6Addr.AAAA[3] == 0x00 {
+					v4Addr := net.IPv4(v6Addr.AAAA[12], v6Addr.AAAA[13], v6Addr.AAAA[14], v6Addr.AAAA[15])
+					port := (uint16(v6Addr.AAAA[10]) << 8) | uint16(v6Addr.AAAA[11])
+					return &Endpoint{Host: v4Addr.String(), Port: port}, nil
+				}
+				return &Endpoint{Host: v6Addr.AAAA.String(), Port: port}, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("no A or AAAA records found for %s", name)
 }
 
 func (config *Config) ResolveEndpoints() error {
@@ -88,10 +80,11 @@ func (config *Config) ResolveEndpoints() error {
 			continue
 		}
 		var err error
-		config.Peers[i].Endpoint.Host, err = resolveHostname(config.Peers[i].Endpoint.Host)
-		if err != nil {
-			return err
+		resolvedEndpoint, err := resolveHostname(config.Peers[i].Endpoint.Host, config.Peers[i].Endpoint.Port)
+		if err != nil || resolvedEndpoint == nil {
+			return fmt.Errorf("failed to resolve endpoint: %w", err)
 		}
+		config.Peers[i].Endpoint = *resolvedEndpoint
 	}
 	return nil
 }
