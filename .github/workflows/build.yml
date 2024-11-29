@@ -27,7 +27,7 @@ jobs:
           dir       
 
       # 打包 amd64 和 arm64 目录为 zip 文件
-      - name: Create zip file with amd64 and arm64 directories
+      - name: 打包 amd64 和 arm64 目录为 zip 文件
         run: |          
           # 压缩 amd64 目录
           powershell Compress-Archive -Path ./amd64 -DestinationPath ./amd64.zip
@@ -37,7 +37,7 @@ jobs:
           powershell Compress-Archive -Path ./amd64.zip, ./arm64.zip -DestinationPath ./wireguard-windows.zip        
 
       # 上传构建的文件（假设 .exe 文件在构建目录下）
-      - name: Upload Build Artifacts
+      - name: 上传固件
         uses: actions/upload-artifact@v3
         with:
           name: wireguard-windows-build
