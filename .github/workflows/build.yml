@@ -12,55 +12,26 @@ jobs:
       - name: 检出仓库
         uses: actions/checkout@v4
 
-      # 查看当前目录
-      - name: 查看当前目录
-        run: |
-          dir
-
       # 执行 build 命令
       - name: 构建WireGuard
-        run: .\build.bat
-
-      # 再次查看构建后的目录
-      - name: 再次查看构建后的目录
+        id: build
         run: |
-          dir       
+          .\build.bat 
+          echo "status=success" >> $GITHUB_OUTPUT
 
       # 打包 amd64 和 arm64 目录为 zip 文件
       - name: 打包 amd64 和 arm64 目录为 zip 文件
+        if: steps.build.outputs.status == 'success'  && !cancelled()
         run: |          
-          # 压缩 amd64 目录
-          powershell Compress-Archive -Path ./amd64 -DestinationPath ./amd64.zip
-          # 压缩 arm64 目录
-          powershell Compress-Archive -Path ./arm64 -DestinationPath ./arm64.zip
-          # 合并两个 zip 文件为一个 zip
-          powershell Compress-Archive -Path ./amd64.zip, ./arm64.zip -DestinationPath ./wireguard-windows.zip        
-
-      # 上传构建的文件（假设 .exe 文件在构建目录下）
-      - name: 上传固件
-        uses: actions/upload-artifact@v3
-        with:
-          name: wireguard-windows-build
-          path: ./wireguard-windows.zip 
-
-      # 创建 GitHub Release
-      - name: 创建 GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        with:
-          tag_name: v${{ github.run_number }}  # 使用流水号作为版本号
-          release_name: Release v${{ github.run_number }}
-          body: 'Release for WireGuard Windows Build'
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+          # 压缩 amd64和arm64 目录
+          powershell Compress-Archive -Path ./amd64, ./arm64 -DestinationPath ./wireguard-windows.zip 
+          
       # 上传压缩包到 GitHub Release
       - name: 上传压缩包到 GitHub Release
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@master
+        if: steps.build.outputs.status == 'success'  && !cancelled()
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./wireguard-windows.zip 
-          asset_name: wireguard-windows-${{ github.run_number }}.zip
-          asset_content_type: application/zip          
+          tag_name: v${{ github.run_number }}
+          files: ./wireguard-windows.zip 
+          body: |
+             wireguard windows客户端，支持ip4p
