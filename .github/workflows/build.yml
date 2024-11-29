@@ -17,11 +17,10 @@ jobs:
         id: build
         run: |
           .\build.bat 
-          echo "status=success" >> $GITHUB_OUTPUT
+          echo "status=success" >> $GITHUB_ENV
 
       # 打包 amd64 和 arm64 目录为 zip 文件
       - name: 打包 amd64 和 arm64 目录为 zip 文件
-        if: steps.build.outputs.status == 'success'  && !cancelled()
         run: |          
           # 压缩 amd64和arm64 目录
           powershell Compress-Archive -Path ./amd64, ./arm64 -DestinationPath ./wireguard-windows.zip 
@@ -29,7 +28,6 @@ jobs:
       # 上传压缩包到 GitHub Release
       - name: 上传压缩包到 GitHub Release
         uses: softprops/action-gh-release@master
-        if: steps.build.outputs.status == 'success'  && !cancelled()
         with:
           tag_name: v${{ github.run_number }}
           files: ./wireguard-windows.zip 
