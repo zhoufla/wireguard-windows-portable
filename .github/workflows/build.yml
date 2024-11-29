@@ -19,7 +19,7 @@ jobs:
 
       # 执行 build 命令
       - name: 构建WireGuard
-        run: build
+        run: .\build.bat
 
       # 上传构建的文件（假设 .exe 文件在构建目录下）
       - name: Upload Build Artifacts
