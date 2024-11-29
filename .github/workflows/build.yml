@@ -41,4 +41,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: wireguard-windows-build
-          path: ./wireguard-windows/amd64/
+          path: ./wireguard-windows.zip 
