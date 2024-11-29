@@ -28,12 +28,14 @@ jobs:
 
       # 打包 amd64 和 arm64 目录为 zip 文件
       - name: 打包 amd64 和 arm64 目录为 zip 文件
+        if: ${{ env.status == 'success' }}
         run: |          
           # 压缩 amd64和arm64 目录
           powershell Compress-Archive -Path ./amd64, ./arm64 -DestinationPath ./wireguard-windows.zip 
           
       # 上传压缩包到 GitHub Release
       - name: 上传压缩包到 GitHub Release
+        if: ${{ env.status == 'success' }}
         uses: softprops/action-gh-release@master
         with:
           tag_name: v${{ github.run_number }}
