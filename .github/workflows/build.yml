@@ -9,33 +9,21 @@ jobs:
 
     steps:
       # 检出仓库
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: 检出仓库
+        uses: actions/checkout@v4
 
-      # 安装 Git 工具（如果必要的话）
-      - name: Install Git
+      # 查看当前目录
+      - name: 查看当前目录
         run: |
-          choco install git
-
-      # 克隆 wireguard-windows 仓库
-      - name: Clone wireguard-windows repository
-        run: |
-          git clone https://github.com/zhoufla/wireguard-windows-portable wireguard-windows
-
-      # 进入 wireguard-windows 目录
-      - name: Change directory to wireguard-windows
-        run: |
-          cd wireguard-windows
+          dir
 
       # 执行 build 命令
-      - name: Build WireGuard
-        run: |
-          cd wireguard-windows
-          .\build.cmd
+      - name: 构建WireGuard
+        run: build
 
       # 上传构建的文件（假设 .exe 文件在构建目录下）
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: wireguard-windows-build
-          path: ./wireguard-windows/*.exe
+          path: ./*.exe
