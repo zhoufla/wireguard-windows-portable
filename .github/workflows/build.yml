@@ -24,11 +24,21 @@ jobs:
       # 再次查看构建后的目录
       - name: 再次查看构建后的目录
         run: |
-          dir        
+          dir       
+
+      # 打包 amd64 和 arm64 目录为 zip 文件
+      - name: Create zip file with amd64 and arm64 directories
+        run: |          
+          # 压缩 amd64 目录
+          powershell Compress-Archive -Path ./amd64 -DestinationPath ./amd64.zip
+          # 压缩 arm64 目录
+          powershell Compress-Archive -Path ./arm64 -DestinationPath ./arm64.zip
+          # 合并两个 zip 文件为一个 zip
+          powershell Compress-Archive -Path ./amd64.zip, ./arm64.zip -DestinationPath ./wireguard-windows.zip        
 
       # 上传构建的文件（假设 .exe 文件在构建目录下）
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: wireguard-windows-build
-          path: ./*.exe
+          path: ./wireguard-windows/amd64/
