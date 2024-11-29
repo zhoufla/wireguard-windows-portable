@@ -1,4 +1,4 @@
-name: Build WireGuard for Windows
+name: 构建WireGuard客户端
 
 on:
   workflow_dispatch:
@@ -20,6 +20,11 @@ jobs:
       # 执行 build 命令
       - name: 构建WireGuard
         run: .\build.bat
+
+      # 再次查看构建后的目录
+      - name: 再次查看构建后的目录
+        run: |
+          dir        
 
       # 上传构建的文件（假设 .exe 文件在构建目录下）
       - name: Upload Build Artifacts
