@@ -19,6 +19,10 @@ jobs:
           .\build.bat 
           echo "status=success" >> $GITHUB_ENV
 
+      # 输出 status 环境变量，帮助调试
+      - name: 输出 status 环境变量
+        run: echo "status=${{ env.status }}"          
+
       # 打包 amd64 和 arm64 目录为 zip 文件
       - name: 打包 amd64 和 arm64 目录为 zip 文件
         run: |          
